@@ -101,8 +101,8 @@ def getstatus(obj):
 	return(obj['status'])
 
 def getservertime(obj):
-	dt = datetime.strptime((obj['ServerTime']), "%Y-%m-%d %H:%M:%S")
-	return(dt.strftime("%d-%m-%Y %H:%M"))
+	dt = datetime.strptime(str(datetime.now()), "%Y-%m-%d %H:%M:%S.%f")
+	return(dt.strftime("%d-%m-%Y %H:%M:%S"))
 
 def getlastupdate(obj):
 	dt = datetime.strptime((obj['result'][0]['LastUpdate']), "%Y-%m-%d %H:%M:%S")
