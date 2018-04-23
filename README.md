@@ -3,6 +3,11 @@ Raspberry Pi WeatherDisplay for Domoticz
 
 Simple script to WeatherSensor data from Domoticz on a cheap Raspberry Pi Display. </br>
 
+<p>
+	Hardware requirements: </br>
+	Raspberry Pi Zero W </br>
+	<a href="https://nl.aliexpress.com/item/Frambozenpastei-1-3-inch-OLED-uitbreidingskaart-SH1106-module-SPI-I2C-Mini-Display/32849447496.html?spm=a2g0s.9042311.0.0.jQL6cq">Display</a>
+</p>
 
 <p>
 	To setup follow documentation and run demo code.</br>
