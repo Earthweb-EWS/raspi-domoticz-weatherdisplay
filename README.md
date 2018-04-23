@@ -18,5 +18,6 @@ Simple script to WeatherSensor data from Domoticz on a cheap Raspberry Pi Displa
 <p>
 	To start at startup: </br>
 	Open: sudo nano /etc/rc.local </br>
+	Add the line before the last line following text: </br>
 	sudo python /home/pi/Python/weatherdisplay.py & </br>
 </p>
