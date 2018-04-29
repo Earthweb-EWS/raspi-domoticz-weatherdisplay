@@ -36,6 +36,7 @@ mode = 1 # Default Displaymode (1-3).
 timer = 240 # x in seconds for refreshing data.
 logPath = os.getcwd() # Path to logfile.
 logfileName = "weatherdisplay" # Filename for logfile.
+defaultDescription = "Weerstation" # Default Description if not filled in by Domoticz Description.
 
 
 logFormatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
@@ -55,14 +56,20 @@ rootLogger.addHandler(consoleHandler)
 def getremotedata():
 	try:
 		global url
-		response = urllib.urlopen(url)
-		return json.loads(response.read())
+		if urllib.urlopen(url).getcode() == 200:
+			response = urllib.urlopen(url)
+			return json.loads(response.read())
+		else:
+			logging.ERROR("URL kan niet worden geopend.")
 	except Exception as e:
 		logging.exception(e)
 		return
 
 def getdesc(obj):
-	return(obj['result'][0]['Description'])
+	desc = (obj['result'][0]['Description'])
+	if not desc:
+		desc = defaultDescription
+	return desc
 
 def gettemp(obj):
 	return(obj['result'][0]['Temp'])
@@ -102,7 +109,7 @@ def getstatus(obj):
 
 def getservertime(obj):
 	dt = datetime.strptime(str(datetime.now()), "%Y-%m-%d %H:%M:%S.%f")
-	return(dt.strftime("%d-%m-%Y %H:%M:%S"))
+	return(dt.strftime("%d-%m-%Y %H:%M"))
 
 def getlastupdate(obj):
 	dt = datetime.strptime((obj['result'][0]['LastUpdate']), "%Y-%m-%d %H:%M:%S")
@@ -133,7 +140,10 @@ except Exception as e:
 	logging.exception(e)
   
 # Print Sensor Status.
-print("{0}: {1}".format(getdesc(data), getstatus(data)))
+if not data:
+	print("{0}: Fout met ophalen data!".format(defaultDescription))
+else:
+	print("{0}: {1}".format(getdesc(data), getstatus(data)))
 
 
 # Load default font.
@@ -175,7 +185,7 @@ if  USER_I2C == 1:
 else:
 	serial = spi(device=0, port=0, bus_speed_hz = 8000000, transfer_size = 4096, gpio_DC = DC_PIN, gpio_RST = RST_PIN)
 
-device = sh1106(serial, rotate=2) #sh1106
+device = sh1106(serial, rotate=0) #sh1106
 
 #init GPIO
 GPIO.setmode(GPIO.BCM) 
@@ -219,28 +229,31 @@ try:
 
 
 			# Write text on screen.
-
-			if mode == 2:
-				draw.text((x, top),       str(getdesc(data)),  font=font, fill=255)
-				draw.text((x, top+16),    "Temperatuur: " + str(gettemp(data)) + u"\u00b0C", font=font, fill=255)
-				draw.text((x, top+24),    "Dauwpunt: " + str(getdew(data)) + u"\u00b0C",  font=font, fill=255)
-				draw.text((x, top+32),    "Luchtvochtigheid: " + str(gethum(data)) + "%",  font=font, fill=255)
-				draw.text((x, top+40),    "Weertype: " + str(gethumstat(data)),  font=font, fill=255)
-			elif mode == 3:
-				draw.text((x, top),       str(getdesc(data)),  font=font, fill=255)
-				draw.text((x, top+16),    "Zonsopkomst: " + str(getsunrise(data)), font=font, fill=255)
-				draw.text((x, top+24),    "Zonsondergang: " + str(getsunset(data)),  font=font, fill=255)
-				draw.text((x, top+40),    "Bijgewerkt op: ",  font=font, fill=255)
-				draw.text((x, top+48),    "" + str(getlastupdate(data)),  font=font, fill=255)
-			elif mode == 8:
-				draw.text((x, top),       str(getdesc(data)),  font=font, fill=255)
-				draw.text((x, top+16),    "Status: " + str(getstatus(data)), font=font, fill=255)
-				draw.text((x, top+24),    "Batterij: " + str(getbatt(data)) + "%",  font=font, fill=255)
-				draw.text((x, top+40),    "Huidige datum & tijd: ",  font=font, fill=255)
-				draw.text((x, top+48),    "" + str(getservertime(data)),  font=font, fill=255)
+			if not data:
+				draw.text((x, top),       defaultDescription,  font=font, fill=255)
+				draw.text((x, top+16),    "Fout met ophalen data!", font=font, fill=255)
 			else:
-				draw.text((x, top),       str(getdesc(data)),  font=font, fill=255)
-				draw.text((x, top+16),    "Temperatuur: " + str(gettemp(data)) + u"\u00b0C", font=font, fill=255)
+				if mode == 2:
+					draw.text((x, top),       str(getdesc(data)),  font=font, fill=255)
+					draw.text((x, top+16),    "Temperatuur: " + str(gettemp(data)) + u"\u00b0C", font=font, fill=255)
+					draw.text((x, top+24),    "Dauwpunt: " + str(getdew(data)) + u"\u00b0C",  font=font, fill=255)
+					draw.text((x, top+32),    "Luchtvochtigheid: " + str(gethum(data)) + "%",  font=font, fill=255)
+					draw.text((x, top+40),    "Weertype: " + str(gethumstat(data)),  font=font, fill=255)
+				elif mode == 3:
+					draw.text((x, top),       str(getdesc(data)),  font=font, fill=255)
+					draw.text((x, top+16),    "Zonsopkomst: " + str(getsunrise(data)), font=font, fill=255)
+					draw.text((x, top+24),    "Zonsondergang: " + str(getsunset(data)),  font=font, fill=255)
+					draw.text((x, top+40),    "Bijgewerkt op: ",  font=font, fill=255)
+					draw.text((x, top+48),    "" + str(getlastupdate(data)),  font=font, fill=255)
+				elif mode == 8:
+					draw.text((x, top),       str(getdesc(data)),  font=font, fill=255)
+					draw.text((x, top+16),    "Status: " + str(getstatus(data)), font=font, fill=255)
+					draw.text((x, top+24),    "Batterij: " + str(getbatt(data)) + "%",  font=font, fill=255)
+					draw.text((x, top+40),    "Huidige datum & tijd: ",  font=font, fill=255)
+					draw.text((x, top+48),    "" + str(getservertime(data)),  font=font, fill=255)
+				else:
+					draw.text((x, top),       str(getdesc(data)),  font=font, fill=255)
+					draw.text((x, top+16),    "Temperatuur: " + str(gettemp(data)) + u"\u00b0C", font=font, fill=255)
 
 except Exception as e:
 	logging.exception(e)
