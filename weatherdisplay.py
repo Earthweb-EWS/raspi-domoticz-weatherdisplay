@@ -12,6 +12,7 @@ import subprocess
 import thread
 
 from datetime import datetime
+from decimal import Decimal
 
 from PIL import Image
 from PIL import ImageDraw
@@ -72,13 +73,16 @@ def getdesc(obj):
 	return desc
 
 def gettemp(obj):
-	return(obj['result'][0]['Temp'])
+	tmp = (Decimal(obj['result'][0]['Temp']))
+	return ('{0:.3g}'.format(tmp))
 
 def getdew(obj):
-	return(obj['result'][0]['DewPoint'])
+	tmp = (Decimal(obj['result'][0]['DewPoint']))
+	return ('{0:.3g}'.format(tmp))
 
 def gethum(obj):
-	return(obj['result'][0]['Humidity'])
+	tmp = (Decimal(obj['result'][0]['Humidity']))
+	return ('{0:.3g}'.format(tmp))
 
 def gethumstat(obj):
 	humstat = (obj['result'][0]['HumidityStatus'])
@@ -99,10 +103,12 @@ def getbatt(obj):
 	return(obj['result'][0]['BatteryLevel'])
 
 def getsunrise(obj):
-	return(obj['Sunrise'])
+	dt = datetime.strptime((obj['Sunrise']), "%H:%M")
+	return(dt.strftime("%H:%M"))
 
 def getsunset(obj):
-	return(obj['Sunset'])
+	dt = datetime.strptime((obj['Sunset']), "%H:%M")
+	return(dt.strftime("%H:%M"))
 
 def getstatus(obj):
 	return(obj['status'])
@@ -114,6 +120,11 @@ def getservertime(obj):
 def getlastupdate(obj):
 	dt = datetime.strptime((obj['result'][0]['LastUpdate']), "%Y-%m-%d %H:%M:%S")
 	return(dt.strftime("%d-%m-%Y %H:%M"))
+
+def make_font(name, size):
+    font_path = os.path.abspath(os.path.join(
+        os.path.dirname(__file__), 'fonts', name))
+    return ImageFont.truetype(font_path, size)
 
 # Define new thread for timer.
 def starttimer(threadName, delay):
@@ -148,6 +159,7 @@ else:
 
 # Load default font.
 font = ImageFont.load_default()
+fontbig = make_font("code2000.ttf", 36)
 
 # Create blank image for drawing.
 # Make sure to create image with mode '1' for 1-bit color.
@@ -253,7 +265,7 @@ try:
 					draw.text((x, top+48),    "" + str(getservertime(data)),  font=font, fill=255)
 				else:
 					draw.text((x, top),       str(getdesc(data)),  font=font, fill=255)
-					draw.text((x, top+16),    "Temperatuur: " + str(gettemp(data)) + u"\u00b0C", font=font, fill=255)
+					draw.text((x, top+16),    str(gettemp(data)) + u"\u00b0C", font=fontbig, fill=255)
 
 except Exception as e:
 	logging.exception(e)
