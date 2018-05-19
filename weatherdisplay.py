@@ -172,7 +172,8 @@ def starttimer(threadName, delay):
 	try:
 		while True:
 			#print ("%s" % (threadName))
-			global data
+			global livedata
+			global daydata
 			livedata=getlivedata()
 			daydata=getdaydata()
 			time.sleep(delay)
