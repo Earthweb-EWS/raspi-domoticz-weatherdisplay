@@ -34,16 +34,23 @@ locale.setlocale(locale.LC_ALL, '')
 #
 # Don't forget to fill in Device Description because this is the header of the display.
 #
-liveurl = "https://URL/json.htm?username=USER&password=PASS&type=devices&rid=NUMBER"
-dayurl = "https://URL/json.htm?username=USER&password=PASS&type=graph&sensor=temp&idx=NUMBER&range=day"
+liveurl = "https://URL/json.htm?username=USER==&password=PASS&type=devices&rid=<SENSORID>" # <SENSORID> as placeholder for sensorid variable.
+dayurl = "https://URL/json.htm?username=USER==&password=PASS&type=graph&sensor=temp&idx=<SENSORID>&range=day" # <SENSORID> as placeholder for sensorid variable.
 
 livedata = 0 # Placeholder for remote JSON file content.
 daydata = 0 # Placeholder for remote JSON file content.
 mode = 1 # Default Displaymode (1-3).
-timer = 240 # x in seconds for refreshing data.
+timer = 240 # x in seconds for refreshing data from Domoticz.
 logPath = os.getcwd() # Path to logfile.
 logfileName = "weatherdisplay" # Filename for logfile.
 defaultDescription = "Weerstation" # Default Description if not filled in by Domoticz Description.
+sensorid = [NUMBER1,NUMBER2,NUMBER3,ETC]
+timer2max = 60 # x in seconds to switch back to startscreen.
+
+
+# Program settings, do not change.
+selectedsensor = 1 # Selected sensor from array of sensors. Starts with number one.
+timer2 = 1 # x in seconds. Starts with number one.
 
 
 logFormatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
@@ -63,8 +70,10 @@ rootLogger.addHandler(consoleHandler)
 def getlivedata():
 	try:
 		global liveurl
-		if urllib.urlopen(liveurl).getcode() == 200:
-			response = urllib.urlopen(liveurl)
+		tmpurl = liveurl
+		tmpurl = tmpurl.replace("<SENSORID>", str(sensorid[selectedsensor - 1]))
+		if urllib.urlopen(tmpurl).getcode() == 200:
+			response = urllib.urlopen(tmpurl)
 			return json.loads(response.read())
 		else:
 			logging.ERROR("URL kan niet worden geopend.")
@@ -76,8 +85,10 @@ def getlivedata():
 def getdaydata():
 	try:
 		global dayurl
-		if urllib.urlopen(dayurl).getcode() == 200:
-			response = urllib.urlopen(dayurl)
+		tmpurl = dayurl
+		tmpurl = tmpurl.replace("<SENSORID>", str(sensorid[selectedsensor - 1]))
+		if urllib.urlopen(tmpurl).getcode() == 200:
+			response = urllib.urlopen(tmpurl)
 			return json.loads(response.read())
 		else:
 			logging.ERROR("URL kan niet worden geopend.")
@@ -140,25 +151,25 @@ def getlastupdate(obj):
 	dt = datetime.strptime((obj['result'][0]['LastUpdate']), "%Y-%m-%d %H:%M:%S")
 	return(dt.strftime("%d-%m-%Y %H:%M"))
 
-def getavetemplasthour(obj):
+def getavetempperiod1(obj):
 	value = 0
-	for x in range(len(obj['result']) - 12, len(obj['result'])):
+	for x in range(len(obj['result']) - 3, len(obj['result'])):
 		value = (value + (obj['result'][x]['te']))
-	value = (value/12)
+	value = (value/3)
 	return(value)
 
-def getavetemp2lasthour(obj):
+def getavetempperiod2(obj):
 	value = 0
-	for x in range(len(obj['result']) - 25, len(obj['result']) - 13):
+	for x in range(len(obj['result']) - 12, len(obj['result']) - 4):
 		value = (value + (obj['result'][x]['te']))
-	value = (value/12)
+	value = (value/8)
 	return(value)
 
 def gettrend():
 	value = 1
-	if getavetemplasthour(daydata) > getavetemp2lasthour(daydata):
+	if getavetempperiod1(daydata) > getavetempperiod2(daydata):
 		value = 2
-	if getavetemplasthour(daydata) < getavetemp2lasthour(daydata):
+	if getavetempperiod1(daydata) < getavetempperiod2(daydata):
 		value = 0
 	return value
 
@@ -180,6 +191,26 @@ def starttimer(threadName, delay):
 	except Exception as e:
 		logging.exception(e)
 
+# Define new thread for timer2.
+def starttimer2(threadName, delay):
+	try:
+		while True:
+			#print ("%s" % (threadName))
+			global mode
+			global selectedsensor
+			if not mode == 1:
+				global livedata
+				global daydata
+				mode = 1
+				selectedsensor = 1
+				livedata=getlivedata()
+				daydata=getdaydata()
+			else:
+				selectedsensor = 1
+			time.sleep(delay)
+	except Exception as e:
+		logging.exception(e)
+
 # Get first time data before the timer kicks in.
 try:
 	livedata=getlivedata()
@@ -189,8 +220,11 @@ except Exception as e:
 
 # Print Timer Value and start it.
 try:
-	print ("Refresh data: " + str(timer) + " seconds")
-	thread.start_new_thread(starttimer, ("Refresh data", timer, ) )
+	print ("Refresh data from Domoticz: " + str(timer) + " seconds")
+	thread.start_new_thread(starttimer, ("Refresh data Domoticz", timer, ) )
+
+	print ("Refresh data on Screen: " + str(timer2max) + " seconds")
+	thread.start_new_thread(starttimer2, ("Refresh data Screen", timer2max, ) )
 except Exception as e:
 	logging.exception(e)
   
@@ -269,19 +303,34 @@ try:
 				mode = 3
 
 			if not GPIO.input(KEY_UP_PIN): #Up button is released
-				mode = 4
+				livedata=getlivedata()
+				daydata=getdaydata()
 	 
 			if not GPIO.input(KEY_LEFT_PIN): #left button is released
-				mode = 5
+				if selectedsensor == len(sensorid):
+					selectedsensor = (selectedsensor - (len(sensorid)) + 1)
+				else:
+					selectedsensor = (selectedsensor + 1)
+				livedata=getlivedata()
+				daydata=getdaydata()
 			
 			if not GPIO.input(KEY_RIGHT_PIN): #right button is released
-				mode = 6
+				if selectedsensor == 1:
+					selectedsensor = (selectedsensor + (len(sensorid)) -1)
+				else:
+					selectedsensor = (selectedsensor - 1)
+				livedata=getlivedata()
+				daydata=getdaydata()
 	 
 			if not GPIO.input(KEY_DOWN_PIN): #down button is released
-				mode = 7
+				livedata=getlivedata()
+				daydata=getdaydata()
 	 
 			if not GPIO.input(KEY_PRESS_PIN): #center button is released
-				mode = 8
+				mode = 1
+				selectedsensor = 1
+				livedata=getlivedata()
+				daydata=getdaydata()
 
 
 			# Write text on screen.
