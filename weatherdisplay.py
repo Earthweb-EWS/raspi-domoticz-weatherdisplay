@@ -303,8 +303,7 @@ try:
 				mode = 3
 
 			if not GPIO.input(KEY_UP_PIN): #Up button is released
-				livedata=getlivedata()
-				daydata=getdaydata()
+				mode = 8
 	 
 			if not GPIO.input(KEY_LEFT_PIN): #left button is released
 				if selectedsensor == len(sensorid):
